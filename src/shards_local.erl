@@ -109,6 +109,14 @@
 %%% Types & Macros
 %%%===================================================================
 
+%% ETS Types
+-type access() :: public | protected | private.
+-type tab()    :: atom().
+-type type()   :: set | ordered_set | bag | duplicate_bag.
+-type cont()   :: '$end_of_table'
+                | {tab(), integer(), integer(), ets:comp_match_spec(), list(), integer()}
+                | {tab(), _, _, integer(), ets:comp_match_spec(), list(), integer(), integer()}.
+
 %% @type tweaks() = {write_concurrency, boolean()}
 %%                | {read_concurrency, boolean()}
 %%                | compressed.
@@ -131,14 +139,14 @@
                     | {pick_node_fun, shards_state:pick_fun()}
                     | {restart_strategy, one_for_one | one_for_all}.
 
-%% @type option() = ets:type() | ets:access() | named_table
+%% @type option() = type() | access() | named_table
 %%                | {keypos, pos_integer()}
 %%                | {heir, pid(), HeirData :: term()}
 %%                | {heir, none} | tweaks()
 %%                | shards_opt().
 %%
 %% Create table options – used by `new/2'.
--type option() :: ets:type() | ets:access() | named_table
+-type option() :: type() | access() | named_table
                 | {keypos, pos_integer()}
                 | {heir, pid(), HeirData :: term()}
                 | {heir, none} | tweaks()
@@ -153,9 +161,9 @@
                     | {named_table, boolean()}
                     | {node, node()}
                     | {owner, pid()}
-                    | {protection, ets:access()}
+                    | {protection, access()}
                     | {size, non_neg_integer()}
-                    | {type, ets:type()}
+                    | {type, type()}
                     | {write_concurrency, boolean()}
                     | {read_concurrency, boolean()}
                     | {shards, [atom()]}.
@@ -169,8 +177,8 @@
 
 %% ETS TabInfo Item
 -type tabinfo_item() :: {name, atom()}
-                      | {type, ets:type()}
-                      | {protection, ets:access()}
+                      | {type, type()}
+                      | {protection, access()}
                       | {named_table, boolean()}
                       | {keypos, non_neg_integer()}
                       | {size, non_neg_integer()}
@@ -183,7 +191,7 @@
 %%  MatchSpec    :: ets:match_spec(),
 %%  Limit        :: pos_integer(),
 %%  Shard        :: non_neg_integer(),
-%%  Continuation :: ets:continuation()
+%%  Continuation :: cont()
 %% }.
 %%
 %% Defines the convention to `ets:select/1,3' continuation:
@@ -199,7 +207,7 @@
   MatchSpec    :: ets:match_spec(),
   Limit        :: pos_integer(),
   Shard        :: non_neg_integer(),
-  Continuation :: ets:continuation()
+  Continuation :: cont()
 }.
 
 %% @type filename() = string() | binary() | atom().
@@ -941,12 +949,11 @@ rename(Tab, Name) ->
   Name  :: atom(),
   State :: shards_state:state().
 rename(Tab, Name, State) ->
-  ok =
-    lists:foreach(fun(Shard) ->
-      ShardName = shards_lib:shard_name(Tab, Shard),
-      NewShardName = shards_lib:shard_name(Name, Shard),
-      NewShardName = do_rename(ShardName, NewShardName)
-    end, shards_lib:iterator(State)),
+  ok = lists:foreach(fun(Shard) ->
+    ShardName = shards_lib:shard_name(Tab, Shard),
+    NewShardName = shards_lib:shard_name(Name, Shard),
+    NewShardName = do_rename(ShardName, NewShardName)
+  end, shards_lib:iterator(State)),
   do_rename(Tab, Name).
 
 %% @private
@@ -1448,8 +1455,7 @@ mapred_funs(MapFun, ReduceFun) ->
       true -> {MapFun, []};
       _    -> MapFun
     end,
-  Reduce = {ReduceFun, []},
-  {Map, Reduce}.
+  {Map, {ReduceFun, []}}.
 
 %% @private
 fold(Tab, NumShards, Fold, [Fun, Acc]) ->

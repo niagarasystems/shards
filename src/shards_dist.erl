@@ -65,10 +65,10 @@
 %%% Extended API
 %%%===================================================================
 
--spec join(Tab, Nodes) -> JoinedNodes when
-  Tab         :: atom(),
-  Nodes       :: [node()],
-  JoinedNodes :: [node()].
+-spec join(Tab, Nodes) -> CurrentNodes when
+  Tab          :: atom(),
+  Nodes        :: [node()],
+  CurrentNodes :: [node()].
 join(Tab, Nodes) ->
   FilteredNodes =
     lists:filter(fun(Node) ->
@@ -85,10 +85,10 @@ join(Tab, Nodes) ->
 join_(Tab) ->
   pg2:join(Tab, shards_lib:get_pid(Tab)).
 
--spec leave(Tab, Nodes) -> LeavedNodes when
-  Tab         :: atom(),
-  Nodes       :: [node()],
-  LeavedNodes :: [node()].
+-spec leave(Tab, Nodes) -> CurrentNodes when
+  Tab          :: atom(),
+  Nodes        :: [node()],
+  CurrentNodes :: [node()].
 leave(Tab, Nodes) ->
   Members = [{node(Pid), Pid} || Pid <- pg2:get_members(Tab)],
   ok =
